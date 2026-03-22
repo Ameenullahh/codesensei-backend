@@ -91,6 +91,41 @@ Keep your response under 4 sentences. Stay in character the whole time.
         print(f"ERROR: {e}")
         return {"error": str(e)}
 
+@app.get("/question/{user_id}/{language}")
+async def get_question(user_id: str, language: str, topic: str = None):
+    try:
+        recall_res = requests.post(
+            f"{HINDSIGHT_BASE}/banks/{BANK_ID}/recall",
+            json={"query": f"What has user {user_id} struggled with?"},
+            headers=hs_headers()
+        )
+        results = recall_res.json().get("results", [])
+        weak_spots = "\n".join([r.get("text", "") for r in results]) or "No history yet."
+
+        if topic:
+            prompt = f"""
+Generate a single {language} coding question specifically about {topic}.
+Return ONLY the question, nothing else.
+"""
+        else:
+            prompt = f"""
+Generate a single {language} coding question for a student.
+Their past weak spots are: {weak_spots}
+If they have weak spots, target those topics.
+If no history, give a beginner friendly question.
+Return ONLY the question, nothing else.
+"""
+        chat = groq_client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama-3.3-70b-versatile"
+        )
+        question = chat.choices[0].message.content
+        return {"question": question}
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # --- TEST ---
 @app.get("/")
 def root():
