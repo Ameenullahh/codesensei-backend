@@ -44,6 +44,7 @@ class SubmitRequest(BaseModel):
     language: str
     mentor: str
     user_id: str
+    question: str = ""
 
 # --- MAIN ENDPOINT ---
 @app.post("/submit")
@@ -63,10 +64,14 @@ async def submit_code(req: SubmitRequest):
 You are {req.mentor}. Stay completely in character the entire time.
 This student previously struggled with: {past_mistakes}
 
+The question they were supposed to solve was:
+{req.question}
+
 Now review their {req.language} code:
 {req.code}
 
-If the code is wrong: roast them in your character's voice, explain the mistake clearly, give a hint without giving the answer away.
+First check if their code actually solves the given question. If they solved a completely different problem, call that out in character and tell them to solve the actual question.
+If the code is wrong: roast them in your character's voice, explain the mistake, give a hint.
 If the code is correct: hype them up in your character's voice.
 Keep your response under 4 sentences. Stay in character the whole time.
 """
