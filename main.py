@@ -8,10 +8,10 @@ from pydantic import BaseModel
 from groq import Groq
 
 # --- API KEYS ---
-GROQ_KEY = "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"
-HINDSIGHT_KEY = "hsk_3f70dd496f237781c2c47f420c192105_73282700529be00d"
-HINDSIGHT_BASE = "https://api.hindsight.vectorize.io"
-BANK_ID = "codesensei"
+GROQ_KEY = os.environ.get("GROQ_KEY")
+HINDSIGHT_KEY = os.environ.get("HINDSIGHT_KEY")
+HINDSIGHT_BASE = os.environ.get("HINDSIGHT_BASE")
+BANK_ID = os.environ.get("BANK_ID")
 
 # --- SETUP ---
 app = FastAPI()
