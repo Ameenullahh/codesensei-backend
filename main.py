@@ -5,17 +5,17 @@ import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from openai import OpenAI
+from groq import Groq
 
 # --- API KEYS ---
-DEEPSEEK_KEY = os.environ.get("DEEPSEEK_KEY")
+GROQ_KEY = os.environ.get("GROQ_KEY")
 HINDSIGHT_KEY = os.environ.get("HINDSIGHT_KEY")
 HINDSIGHT_BASE = os.environ.get("HINDSIGHT_BASE")
 BANK_ID = os.environ.get("BANK_ID")
 
 # --- SETUP ---
 app = FastAPI()
-deepseek_client = OpenAI(api_key=DEEPSEEK_KEY, base_url="https://api.deepseek.com")
+groq_client = Groq(api_key=GROQ_KEY)
 
 # --- HINDSIGHT HEADERS ---
 def hs_headers():
@@ -76,10 +76,10 @@ If the code is correct: hype them up in your character's voice.
 Keep your response under 4 sentences. Stay in character the whole time.
 """
 
-        # 3. get deepseek response
-        chat = deepseek_client.chat.completions.create(
+        # 3. get groq response
+        chat = groq_client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="deepseek-chat"
+            model="llama-3.3-70b-versatile"
         )
         feedback = chat.choices[0].message.content
 
@@ -99,9 +99,9 @@ If they have weak spots, target those topics.
 If no history, give a beginner friendly question.
 Return ONLY the question, nothing else.
 """
-        next_chat = deepseek_client.chat.completions.create(
+        next_chat = groq_client.chat.completions.create(
             messages=[{"role": "user", "content": next_prompt}],
-            model="deepseek-chat"
+            model="llama-3.3-70b-versatile"
         )
         next_question = next_chat.choices[0].message.content
 
@@ -136,16 +136,15 @@ If they have weak spots, target those topics.
 If no history, give a beginner friendly question.
 Return ONLY the question, nothing else.
 """
-        chat = deepseek_client.chat.completions.create(
+        chat = groq_client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="deepseek-chat"
+            model="llama-3.3-70b-versatile"
         )
         question = chat.choices[0].message.content
         return {"question": question}
 
     except Exception as e:
         return {"error": str(e)}
-
 # --- CHAT ENDPOINT ---
 class ChatRequest(BaseModel):
     message: str
@@ -157,6 +156,7 @@ class ChatRequest(BaseModel):
 @app.post("/chat")
 async def chat_with_mentor(req: ChatRequest):
     try:
+        # build conversation messages
         messages = [
             {
                 "role": "system",
@@ -168,14 +168,17 @@ Keep responses conversational and under 5 sentences."""
             }
         ]
 
+        # add conversation history so it remembers what was said
         for msg in req.conversation_history:
             messages.append(msg)
 
+        # add the new message
         messages.append({"role": "user", "content": req.message})
 
-        chat = deepseek_client.chat.completions.create(
+        # get groq response
+        chat = groq_client.chat.completions.create(
             messages=messages,
-            model="deepseek-chat"
+            model="llama-3.3-70b-versatile"
         )
         response = chat.choices[0].message.content
 
@@ -195,6 +198,7 @@ class DifficultyRequest(BaseModel):
 @app.post("/difficulty")
 async def adjust_difficulty(req: DifficultyRequest):
     try:
+        # detect what user wants
         prompt = f"""
 The user said: "{req.message}"
 Their current question was: "{req.current_question}"
@@ -207,16 +211,15 @@ Detect if they want:
 Then generate a new {req.language} coding question accordingly.
 Return ONLY the new question, nothing else.
 """
-        chat = deepseek_client.chat.completions.create(
+        chat = groq_client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="deepseek-chat"
+            model="llama-3.3-70b-versatile"
         )
         new_question = chat.choices[0].message.content
         return {"question": new_question}
 
     except Exception as e:
         return {"error": str(e)}
-
 # --- TEST ---
 @app.get("/")
 def root():
